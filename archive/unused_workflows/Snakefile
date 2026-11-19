@@ -1,0 +1,41 @@
+# Full path: FastQC -> STAR -> featureCounts -> genes x samples matrix.
+# 3'-tag RNA-seq: single-end; gene-level counts only.
+# Fill SAMPLES + CONDITION after choosing your GSE127506 runs.
+
+SAMPLES = {
+    # "MOLM13_DMSO_1":    "SRRXXXXXXX",
+    # "MOLM13_DMSO_2":    "SRRXXXXXXX",
+    # "MOLM13_VTP_1":     "SRRXXXXXXX",
+    # "MOLM13_VTP_2":     "SRRXXXXXXX",
+}
+
+GENOME_DIR = "ref/star_index"      # built from GRCh38 primary assembly + GENCODE GTF
+GTF        = "ref/gencode.v44.annotation.gtf"
+
+rule all:
+    input:
+        "results/counts_matrix.tsv",
+        expand("qc/{s}_fastqc.html", s=SAMPLES.keys())
+
+rule fastqc:
+    input:  "data/fastq/{s}.fastq.gz"
+    output: "qc/{s}_fastqc.html"
+    shell:  "fastqc -o qc {input}"
+
+rule star_align:
+    input:  "data/fastq/{s}.fastq.gz"
+    output: "aln/{s}.Aligned.sortedByCoord.out.bam"
+    threads: 4
+    shell:
+        "STAR --runThreadN {threads} --genomeDir %s "
+        "--readFilesIn {input} --readFilesCommand zcat "
+        "--outSAMtype BAM SortedByCoordinate "
+        "--outFileNamePrefix aln/{wildcards.s}." % GENOME_DIR
+
+rule featurecounts:
+    input:  expand("aln/{s}.Aligned.sortedByCoord.out.bam", s=SAMPLES.keys())
+    output: "results/counts_matrix.tsv"
+    threads: 4
+    shell:
+        "featureCounts -T {threads} -a %s -o results/counts_raw.txt {input} && "
+        "tail -n +2 results/counts_raw.txt | cut -f1,7- > {output}" % GTF

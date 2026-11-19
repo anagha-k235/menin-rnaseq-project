@@ -1,0 +1,16 @@
+
+name: menin-rnaseq
+channels:
+  - conda-forge
+  - bioconda
+
+dependencies:
+  - r-base>=4.3
+  - bioconductor-deseq2
+  - bioconductor-apeglm
+  - bioconductor-fgsea
+  - r-msigdbr
+  - r-pheatmap
+  - r-tidyverse
+  - r-ggrepel
+
